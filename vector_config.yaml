@@ -1,0 +1,48 @@
+data_dir: /opt/vector/data
+
+api:
+  enabled: true
+  address: "0.0.0.0:8686"
+
+sources:
+  my_http_source:
+    type: http
+    address: 0.0.0.0:8080 # The address and port to listen on
+    encoding: json # The expected encoding of the incoming data (e.g., json, text)
+
+transforms:
+  add_prefix:
+    type: remap
+    inputs:
+      - my_http_source
+    source: |  # VRL program: add a prefix to the message field
+      .message, err = "Processed: " + .message
+
+  replace_via:
+    type: remap
+    inputs:
+      - add_prefix
+    source: |  # VRL program: replace "via" with "through" in the message field
+      .message, err = replace(.message, "via", "through")
+
+  uppercase_message:
+    type: remap
+    inputs:
+      - replace_via
+    source: |  # VRL program: convert the message to uppercase
+      .message, err = upcase(.message)
+
+  transform_4:
+    type: remap
+    inputs:
+      - my_http_source
+    source: |
+      .message, err = "Direct: " + .message
+
+sinks:
+  my_console_sink:
+    type: console
+    inputs:
+      - uppercase_message
+    encoding:
+      codec: json
